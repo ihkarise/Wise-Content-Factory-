@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+.clasp.json
+apps/gateway/.clasp.json
+dist/
+coverage/

@@ -1,0 +1,11 @@
+{
+  "name": "@wcf/providers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI provider adapters. Every provider implements the same interface (see providerRouter.js in @wcf/infrastructure) so business logic never depends on a specific vendor.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}
