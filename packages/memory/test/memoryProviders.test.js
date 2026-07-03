@@ -197,3 +197,26 @@ test('google sheets provider: ensures header, appends, reads, updates, and soft-
   assert.equal(sheetRows.size, 1, 'writing a soft-deleted key should reuse its row, not append a new one');
   assert.equal(resurrected.data.voice, 'back again');
 });
+
+test('google sheets provider: a transient index-load failure does not permanently break later operations', async () => {
+  let attempts = 0;
+  const fakeFetch = async (url, init) => {
+    const decodedUrl = decodeURIComponent(url);
+    if (decodedUrl.includes('Memory!A1:M1')) {
+      if (!init || init.method === undefined) return jsonResponse({ values: [['collection']] });
+      return jsonResponse({});
+    }
+    if (decodedUrl.includes('Memory!A2:M')) {
+      attempts += 1;
+      if (attempts === 1) return { ok: false, status: 500, text: async () => 'transient error', json: async () => ({}) };
+      return jsonResponse({ values: [] });
+    }
+    throw new Error(`unexpected ${url}`);
+  };
+  const provider = createGoogleSheetsMemoryProvider({ spreadsheetId: 'sheet-1', accessToken: 'gs-token', fetchImpl: fakeFetch });
+
+  await assert.rejects(provider.list('brand'), /Google Sheets API error 500/);
+  // The next call should retry from scratch instead of replaying the same cached rejection.
+  const list = await provider.list('brand');
+  assert.deepEqual(list, []);
+});

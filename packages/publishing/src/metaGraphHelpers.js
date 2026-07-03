@@ -14,9 +14,13 @@ export function buildGraphUrl(baseUrl, path, params = {}) {
   return url.toString();
 }
 
+// A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch has
+// no default timeout of its own.
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 /** @param {typeof fetch} fetchImpl @param {string} url @param {'GET'|'POST'} [method] */
 export async function graphRequest(fetchImpl, url, method = 'GET') {
-  const response = await fetchImpl(url, { method });
+  const response = await fetchImpl(url, { method, signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.error) {
     throw new Error(data.error?.message || `Graph API error ${response.status}`);

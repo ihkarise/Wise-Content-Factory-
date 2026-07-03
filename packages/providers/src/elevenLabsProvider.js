@@ -18,6 +18,10 @@ const DEFAULT_MODEL = 'eleven_multilingual_v2';
 // Rough public per-1k-character pricing for cost estimation only (not billing-accurate).
 const COST_PER_1K_CHARS_USD = 0.18;
 
+// A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch has
+// no default timeout of its own.
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 /**
  * @param {{apiKey?: string, voiceId?: string, model?: string, id?: string, tier?: string,
  *   fetchImpl?: typeof fetch}} options
@@ -44,6 +48,7 @@ export function createElevenLabsProvider({
         method: 'POST',
         headers: { 'content-type': 'application/json', 'xi-api-key': apiKey, accept: 'audio/mpeg' },
         body: JSON.stringify({ text, model_id: model }),
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

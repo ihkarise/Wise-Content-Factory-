@@ -218,6 +218,14 @@ body {
   box-shadow: var(--shadow-2);
 }
 
+/* The textarea below removes the browser's default focus outline (it doesn't fit the pill-shaped
+   input), so the ring goes on this wrapper instead — keyboard users still get a visible focus
+   indicator (CLAUDE.md Design Rules: "Support keyboard navigation"). */
+.prompt-editor:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .prompt-editor__input {
   flex: 1;
   resize: none;

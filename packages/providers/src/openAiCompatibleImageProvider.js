@@ -8,10 +8,13 @@
 import { defineProvider } from './providerInterface.js';
 
 const CAPABILITIES = ['generate_image', 'generate_thumbnail'];
+// Image generation is slower than text, and a hung upstream would otherwise tie up the request
+// indefinitely — Node's fetch has no default timeout of its own.
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 /**
  * @param {{id: string, baseUrl: string, apiKey?: string, model: string, size?: string,
- *   tier?: string, costPerImageUsd?: number, fetchImpl?: typeof fetch}} options
+ *   tier?: string, costPerImageUsd?: number, fetchImpl?: typeof fetch, timeoutMs?: number}} options
  */
 export function createOpenAiCompatibleImageProvider({
   id,
@@ -22,6 +25,7 @@ export function createOpenAiCompatibleImageProvider({
   tier = 'premium',
   costPerImageUsd = 0.04,
   fetchImpl = globalThis.fetch,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 } = {}) {
   const isLocalEndpoint = /localhost|127\.0\.0\.1/.test(baseUrl || '');
   const requiresKey = !isLocalEndpoint;
@@ -43,6 +47,7 @@ export function createOpenAiCompatibleImageProvider({
           ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify({ model, prompt, size, n: 1 }),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

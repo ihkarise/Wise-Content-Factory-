@@ -12,9 +12,14 @@
  * injected by the caller, fetchImpl injectable for testing.
  */
 import { definePublishingProvider } from '../publishingProviderInterface.js';
+import { safeText } from '../httpHelpers.js';
 
 const API_BASE_URL = 'https://api.x.com/2';
 const MEDIA_UPLOAD_URL = 'https://upload.x.com/1.1/media/upload.json';
+// Metadata calls are quick; a hung upstream would otherwise tie up the request indefinitely since
+// Node's fetch has no default timeout. Media transfer (fetch + upload) gets a longer budget.
+const METADATA_TIMEOUT_MS = 30_000;
+const TRANSFER_TIMEOUT_MS = 120_000;
 
 /**
  * @param {{accessToken?: string, id?: string, fetchImpl?: typeof fetch}} options
@@ -23,7 +28,7 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
   const configured = Boolean(accessToken);
 
   async function uploadMedia(mediaUrl) {
-    const sourceResponse = await fetchImpl(mediaUrl);
+    const sourceResponse = await fetchImpl(mediaUrl, { signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS) });
     if (!sourceResponse.ok) throw new Error(`Could not fetch source media from "${mediaUrl}" (status ${sourceResponse.status}).`);
     const bytes = await sourceResponse.arrayBuffer();
     const form = new FormData();
@@ -32,6 +37,7 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
       body: form,
+      signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS),
     });
     if (!uploadResponse.ok) throw new Error(`X media upload error ${uploadResponse.status}: ${await safeText(uploadResponse)}`);
     const data = await uploadResponse.json();
@@ -48,7 +54,10 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
     healthStatus: configured ? 'healthy' : 'unavailable',
     async authenticate() {
       assertConfigured();
-      const response = await fetchImpl(`${API_BASE_URL}/users/me`, { headers: { authorization: `Bearer ${accessToken}` } });
+      const response = await fetchImpl(`${API_BASE_URL}/users/me`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
+      });
       if (!response.ok) throw new Error(`X auth check error ${response.status}: ${await safeText(response)}`);
       const data = await response.json();
       return { authenticated: true, accountId: data.data?.id };
@@ -81,6 +90,7 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
         method: 'POST',
         headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
         body: JSON.stringify({ text: content.text || '', ...(mediaId ? { media: { media_ids: [mediaId] } } : {}) }),
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`X publish error ${response.status}: ${await safeText(response)}`);
       const data = await response.json();
@@ -89,6 +99,7 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
     async getUploadStatus(platformPostId) {
       const response = await fetchImpl(`${API_BASE_URL}/tweets/${platformPostId}`, {
         headers: { authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`X status check error ${response.status}: ${await safeText(response)}`);
       const data = await response.json();
@@ -97,10 +108,3 @@ export function createXProvider({ accessToken, id = 'x', fetchImpl = globalThis.
   });
 }
 
-async function safeText(response) {
-  try {
-    return await response.text();
-  } catch {
-    return '';
-  }
-}

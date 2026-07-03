@@ -16,7 +16,7 @@
  * "Failure Modes" in packages/memory/README.md.
  */
 import { defineMemoryProvider, matchesQuery } from '../memoryProviderInterface.js';
-import { createMemoryRecord, applyMemoryUpdate } from '../memoryRecord.js';
+import { applyMemoryUpdate, nextMemoryRecordVersion } from '../memoryRecord.js';
 
 const API_BASE_URL = 'https://sheets.googleapis.com/v4/spreadsheets';
 const COLUMNS = ['collection', 'key', 'data', 'tags', 'version', 'relationships', 'metadata', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy', 'previousVersions', 'deleted'];
@@ -48,9 +48,12 @@ export function createGoogleSheetsMemoryProvider({
   let indexPromise = null; // lazy-loaded { rows: Map<rowNumber, string[]>, byMapKey: Map<string, rowNumber>, nextRow: number }
 
   async function sheetsRequest(path, init) {
+    // A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch
+    // has no default timeout of its own.
     const response = await fetchImpl(`${API_BASE_URL}/${spreadsheetId}${path}`, {
       ...init,
       headers: { ...authHeader, 'content-type': 'application/json', ...(init?.headers || {}) },
+      signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) {
       const body = await response.text().catch(() => '');
@@ -83,7 +86,15 @@ export function createGoogleSheetsMemoryProvider({
   }
 
   function getIndex() {
-    if (!indexPromise) indexPromise = loadIndex();
+    if (!indexPromise) {
+      // If loadIndex() fails (e.g. a transient network error), don't cache the rejection forever
+      // — clear it so the *next* call retries instead of every future operation on this provider
+      // failing with the same stale error.
+      indexPromise = loadIndex().catch((err) => {
+        indexPromise = null;
+        throw err;
+      });
+    }
     return indexPromise;
   }
 
@@ -143,17 +154,7 @@ export function createGoogleSheetsMemoryProvider({
     async write(collection, key, data, options = {}) {
       const entry = await readEntry(collection, key);
       const existing = entry && !entry.deleted ? entry.record : null;
-      const record = createMemoryRecord({
-        collection, key, data,
-        tags: options.tags, relationships: options.relationships, metadata: options.metadata,
-        version: existing ? existing.version + 1 : 1,
-        previousVersions: existing
-          ? [...existing.previousVersions, { version: existing.version, data: existing.data, updatedAt: existing.audit.updatedAt }]
-          : [],
-        audit: existing
-          ? { createdAt: existing.audit.createdAt, createdBy: existing.audit.createdBy, updatedBy: options.actor }
-          : { createdBy: options.actor, updatedBy: options.actor },
-      });
+      const record = nextMemoryRecordVersion(existing, { collection, key, data, options });
       const row = recordToRow(record, false);
       if (entry) {
         await writeRow(entry.rowNumber, row);

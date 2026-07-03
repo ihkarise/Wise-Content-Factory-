@@ -3,18 +3,19 @@
 An AI Content Operating System — turn one idea into a complete, multi-platform marketing
 campaign. See [`docs/architecture/PRODUCT.md`](docs/architecture/PRODUCT.md) for the full vision.
 
-> **Status:** early implementation. The text-generation pipeline (Conversation → Intent →
-> Strategy → Agent Orchestrator → Content Package) works end to end, offline and for free, using
-> local mock providers. Real AI providers, real media generation, and a live gateway deployment
-> are wired up and tested but need actual credentials/deployment to go live — see
-> [Architecture Review Report](#architecture-review--roadmap) below.
+> **Status: Release Candidate (v1.0.0-rc.1).** The full pipeline (Conversation → Intent →
+> Strategy → Agent Orchestrator → Content Package → Publishing) works end to end, offline and for
+> free, using local mock providers. Real AI/media/publishing providers, persistent memory, and a
+> live gateway deployment are wired up, tested, and production-hardened but need actual
+> credentials/deployment to go live — see [Architecture Review Report](#architecture-review--roadmap)
+> below and `RELEASE_CANDIDATE_REPORT.md` for the full RC1 production-hardening pass.
 
 ## Try it in 30 seconds (no setup, no API keys)
 
 ```bash
 npm install
 npm run example                    # runs Example 1 from docs/architecture/EXAMPLES.md end to end
-npm test                           # 165 tests across every layer
+npm test                           # 171 tests across every layer
 python3 -m http.server 8080        # from the repo root
 # open http://localhost:8080/apps/web/  — a working conversational UI, $0 cost
 ```
@@ -85,7 +86,7 @@ providers in `packages/providers` — nothing to configure, nothing that costs m
 npm test
 ```
 
-165 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
+171 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
 `packages/publishing`, `packages/memory`, `packages/engines`, `packages/agents`, `apps/gateway`
 (via a Node `vm` harness that loads the *actual* `.gs` files with mocked Google Apps Script
 globals — see [`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)),

@@ -18,7 +18,16 @@
  * @property {(key: string) => void} delete
  */
 
-export function createInMemoryCacheStore() {
+const DEFAULT_MAX_ENTRIES = 5000;
+
+/**
+ * @param {{maxEntries?: number}} [options] Bounds the store's size (default 5000) so a
+ *   long-running process with high cache-key cardinality (e.g. many distinct prompts, each cached
+ *   under a unique key that's never revisited) can't grow this Map without limit — an unbounded
+ *   memory leak otherwise, since TTL alone only expires entries lazily on `get`, never proactively.
+ *   Oldest entries are evicted first once the cap is hit.
+ */
+export function createInMemoryCacheStore({ maxEntries = DEFAULT_MAX_ENTRIES } = {}) {
   const map = new Map();
   return {
     get(key) {
@@ -31,7 +40,11 @@ export function createInMemoryCacheStore() {
       return entry.value;
     },
     set(key, value, ttlMs) {
+      map.delete(key); // re-set moves this key to the most-recently-inserted position below
       map.set(key, { value, expiresAt: Date.now() + ttlMs });
+      while (map.size > maxEntries) {
+        map.delete(map.keys().next().value);
+      }
     },
     has(key) {
       return this.get(key) !== undefined;

@@ -18,6 +18,11 @@ const API_BASE_URL = 'https://api.bfl.ml/v1';
 // Rough public per-image pricing for cost estimation only (not billing-accurate).
 const COST_PER_IMAGE_USD = 0.04;
 
+// Each individual HTTP call (submit, each poll) gets its own bounded timeout — a hung upstream
+// would otherwise tie up that one call indefinitely regardless of pollUntilComplete's own
+// maxAttempts budget, since an attempt that never resolves never increments the attempt counter.
+const REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * @param {{apiKey?: string, model?: string, id?: string, tier?: string, width?: number,
  *   height?: number, fetchImpl?: typeof fetch, pollIntervalMs?: number, maxPollAttempts?: number}} options
@@ -48,6 +53,7 @@ export function createFluxProvider({
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-key': apiKey },
         body: JSON.stringify({ prompt, width, height }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       if (!submitResponse.ok) {
         const body = await submitResponse.text().catch(() => '');
@@ -60,6 +66,7 @@ export function createFluxProvider({
         poll: async () => {
           const pollResponse = await fetchImpl(`${pollingUrl}${pollingUrl.includes('?') ? '&' : '?'}id=${jobId}`, {
             headers: { 'x-key': apiKey },
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
           });
           if (!pollResponse.ok) {
             const body = await pollResponse.text().catch(() => '');

@@ -20,7 +20,7 @@
  * adapter is scoped to, not appropriate at Brand/Project/Asset scale (again, use Drive/Sheets).
  */
 import { defineMemoryProvider, matchesQuery } from '../memoryProviderInterface.js';
-import { createMemoryRecord, applyMemoryUpdate } from '../memoryRecord.js';
+import { applyMemoryUpdate, nextMemoryRecordVersion } from '../memoryRecord.js';
 
 const KEY_PREFIX = 'wcf_memory__';
 
@@ -76,13 +76,7 @@ export function createPropertiesServiceMemoryProvider({ id = 'properties-service
     },
     async write(collection, key, data, options = {}) {
       const existing = readRecord(collection, key);
-      const record = createMemoryRecord({
-        collection, key, data,
-        tags: options.tags, relationships: options.relationships, metadata: options.metadata,
-        version: existing ? existing.version + 1 : 1,
-        previousVersions: existing ? [...existing.previousVersions, { version: existing.version, data: existing.data, updatedAt: existing.audit.updatedAt }] : [],
-        audit: existing ? { createdAt: existing.audit.createdAt, createdBy: existing.audit.createdBy, updatedBy: options.actor } : { createdBy: options.actor, updatedBy: options.actor },
-      });
+      const record = nextMemoryRecordVersion(existing, { collection, key, data, options });
       writeRecord(record);
       return record;
     },

@@ -3,7 +3,7 @@
  * and local-JSON providers (local JSON is just this plus disk persistence hooks) so versioning,
  * search, and list logic exists exactly once (CLAUDE.md: "never duplicate business logic").
  */
-import { createMemoryRecord, applyMemoryUpdate } from './memoryRecord.js';
+import { applyMemoryUpdate, nextMemoryRecordVersion } from './memoryRecord.js';
 import { matchesQuery } from './memoryProviderInterface.js';
 
 export class RecordStore {
@@ -24,17 +24,7 @@ export class RecordStore {
 
   async write(collection, key, data, options = {}) {
     const existing = this.records.get(this._mapKey(collection, key));
-    const record = createMemoryRecord({
-      collection,
-      key,
-      data,
-      tags: options.tags,
-      relationships: options.relationships,
-      metadata: options.metadata,
-      version: existing ? existing.version + 1 : 1,
-      previousVersions: existing ? [...existing.previousVersions, { version: existing.version, data: existing.data, updatedAt: existing.audit.updatedAt }] : [],
-      audit: existing ? { createdAt: existing.audit.createdAt, createdBy: existing.audit.createdBy, updatedBy: options.actor } : { createdBy: options.actor, updatedBy: options.actor },
-    });
+    const record = nextMemoryRecordVersion(existing, { collection, key, data, options });
     this.records.set(this._mapKey(collection, key), record);
     this.onChange();
     return record;

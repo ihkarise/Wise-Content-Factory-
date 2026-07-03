@@ -11,7 +11,7 @@
  * framework. See `apps/omniroute-server/README.md` for configuration and deployment notes.
  */
 import { createServer } from 'node:http';
-import { OmniRoute, redact } from '../../packages/infrastructure/src/index.js';
+import { OmniRoute, redact, timingSafeEqualStrings } from '../../packages/infrastructure/src/index.js';
 import { validateCapabilityRequest } from '../../packages/core/src/index.js';
 import {
   createMockTextProvider,
@@ -172,7 +172,9 @@ function isAuthorized(req, apiKey) {
   if (!apiKey) return true; // no shared secret configured — dev mode, see README "Configuration"
   const header = req.headers.authorization || '';
   const [scheme, token] = header.split(' ');
-  return scheme === 'Bearer' && token === apiKey;
+  // Constant-time comparison — a plain `===` here would let response-time measurement narrow
+  // down the shared secret character by character.
+  return scheme === 'Bearer' && Boolean(token) && timingSafeEqualStrings(token, apiKey);
 }
 
 /**
@@ -236,4 +238,19 @@ if (isMain) {
   server.listen(port, () => {
     console.log(`OmniRoute gateway listening on :${port}`);
   });
+
+  // Graceful shutdown: stop accepting new connections and let in-flight requests finish instead
+  // of being killed mid-request — matters for rolling deploys/container orchestrators, which send
+  // SIGTERM before forcibly killing the process.
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}, shutting down gracefully…`);
+    server.close(() => process.exit(0));
+    // Belt-and-suspenders: don't hang forever if a connection never closes on its own.
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }

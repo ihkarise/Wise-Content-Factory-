@@ -17,8 +17,13 @@
  * URN injected by the caller, fetchImpl injectable for testing.
  */
 import { definePublishingProvider } from '../publishingProviderInterface.js';
+import { safeText } from '../httpHelpers.js';
 
 const API_BASE_URL = 'https://api.linkedin.com/v2';
+// Metadata calls are quick; a hung upstream would otherwise tie up the request indefinitely since
+// Node's fetch has no default timeout. Image transfer (fetch + upload) gets a longer budget.
+const METADATA_TIMEOUT_MS = 30_000;
+const TRANSFER_TIMEOUT_MS = 120_000;
 
 /**
  * @param {{accessToken?: string, authorUrn?: string, id?: string, fetchImpl?: typeof fetch}} options
@@ -42,6 +47,7 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
           serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
         },
       }),
+      signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
     });
     if (!registerResponse.ok) throw new Error(`LinkedIn asset registration error ${registerResponse.status}: ${await safeText(registerResponse)}`);
     const registerData = await registerResponse.json();
@@ -49,13 +55,14 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
     const asset = registerData.value?.asset;
     if (!uploadUrl || !asset) throw new Error('LinkedIn API did not return an upload URL/asset URN.');
 
-    const sourceResponse = await fetchImpl(imageUrl);
+    const sourceResponse = await fetchImpl(imageUrl, { signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS) });
     if (!sourceResponse.ok) throw new Error(`Could not fetch source image from "${imageUrl}" (status ${sourceResponse.status}).`);
     const imageBytes = await sourceResponse.arrayBuffer();
     const uploadResponse = await fetchImpl(uploadUrl, {
       method: 'PUT',
       headers: { authorization: `Bearer ${accessToken}` },
       body: imageBytes,
+      signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS),
     });
     if (!uploadResponse.ok) throw new Error(`LinkedIn image upload error ${uploadResponse.status}: ${await safeText(uploadResponse)}`);
     return asset;
@@ -71,7 +78,10 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
     healthStatus: configured ? 'healthy' : 'unavailable',
     async authenticate() {
       assertConfigured();
-      const response = await fetchImpl(`${API_BASE_URL}/userinfo`, { headers: { authorization: `Bearer ${accessToken}` } });
+      const response = await fetchImpl(`${API_BASE_URL}/userinfo`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
+      });
       if (!response.ok) throw new Error(`LinkedIn auth check error ${response.status}: ${await safeText(response)}`);
       const data = await response.json();
       return { authenticated: true, accountId: data.sub };
@@ -115,6 +125,7 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
           },
           visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
         }),
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`LinkedIn publish error ${response.status}: ${await safeText(response)}`);
       const postId = response.headers.get('x-restli-id') || (await response.json().catch(() => ({}))).id;
@@ -123,6 +134,7 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
     async getUploadStatus(platformPostId) {
       const response = await fetchImpl(`${API_BASE_URL}/ugcPosts/${encodeURIComponent(platformPostId)}`, {
         headers: { authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`LinkedIn status check error ${response.status}: ${await safeText(response)}`);
       const data = await response.json();
@@ -131,10 +143,3 @@ export function createLinkedinProvider({ accessToken, authorUrn, id = 'linkedin'
   });
 }
 
-async function safeText(response) {
-  try {
-    return await response.text();
-  } catch {
-    return '';
-  }
-}

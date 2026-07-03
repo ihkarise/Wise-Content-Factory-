@@ -11,7 +11,7 @@
  * caller (a real OAuth flow lives elsewhere), never acquired by this file.
  */
 import { defineMemoryProvider, matchesQuery } from '../memoryProviderInterface.js';
-import { createMemoryRecord, applyMemoryUpdate } from '../memoryRecord.js';
+import { applyMemoryUpdate, nextMemoryRecordVersion } from '../memoryRecord.js';
 
 const API_BASE_URL = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/drive/v3';
@@ -39,7 +39,14 @@ export function createGoogleDriveMemoryProvider({ accessToken, folderId, id = 'g
   }
 
   async function driveRequest(url, init) {
-    const response = await fetchImpl(url, { ...init, headers: { ...authHeader, ...(init?.headers || {}) } });
+    // A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch
+    // has no default timeout of its own. Generous since this covers both small metadata calls and
+    // full file uploads/downloads.
+    const response = await fetchImpl(url, {
+      ...init,
+      headers: { ...authHeader, ...(init?.headers || {}) },
+      signal: AbortSignal.timeout(120_000),
+    });
     if (!response.ok) {
       const body = await response.text().catch(() => '');
       throw new Error(`Google Drive API error ${response.status}: ${body}`);
@@ -91,17 +98,7 @@ export function createGoogleDriveMemoryProvider({ accessToken, folderId, id = 'g
     async write(collection, key, data, options = {}) {
       const existingFile = await findFile(collection, key);
       const existingRecord = existingFile ? await readFileContent(existingFile.id) : null;
-      const record = createMemoryRecord({
-        collection, key, data,
-        tags: options.tags, relationships: options.relationships, metadata: options.metadata,
-        version: existingRecord ? existingRecord.version + 1 : 1,
-        previousVersions: existingRecord
-          ? [...existingRecord.previousVersions, { version: existingRecord.version, data: existingRecord.data, updatedAt: existingRecord.audit.updatedAt }]
-          : [],
-        audit: existingRecord
-          ? { createdAt: existingRecord.audit.createdAt, createdBy: existingRecord.audit.createdBy, updatedBy: options.actor }
-          : { createdBy: options.actor, updatedBy: options.actor },
-      });
+      const record = nextMemoryRecordVersion(existingRecord, { collection, key, data, options });
       await upsertFile(existingFile?.id, record);
       return record;
     },

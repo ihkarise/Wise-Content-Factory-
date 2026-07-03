@@ -23,6 +23,11 @@ const DEFAULT_BASE_URL = 'https://api.hyperframes.ai/v1';
 // Rough per-generation pricing for cost estimation only (not billing-accurate).
 const COST_PER_VIDEO_USD = 0.5;
 
+// Each individual HTTP call (submit, each poll) gets its own bounded timeout — a hung upstream
+// would otherwise tie up that one call indefinitely regardless of pollUntilComplete's own
+// maxAttempts budget, since an attempt that never resolves never increments the attempt counter.
+const REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * @param {{apiKey?: string, id?: string, tier?: string, baseUrl?: string,
  *   submitPath?: string, model?: string, fetchImpl?: typeof fetch,
@@ -54,6 +59,7 @@ export function createHyperFramesProvider({
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model, prompt, scenes: request.input.scenes || undefined }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       if (!submitResponse.ok) {
         const body = await submitResponse.text().catch(() => '');
@@ -64,7 +70,10 @@ export function createHyperFramesProvider({
 
       const final = await pollUntilComplete({
         poll: async () => {
-          const pollResponse = await fetchImpl(pollUrl, { headers: { authorization: `Bearer ${apiKey}` } });
+          const pollResponse = await fetchImpl(pollUrl, {
+            headers: { authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          });
           if (!pollResponse.ok) {
             const body = await pollResponse.text().catch(() => '');
             throw new Error(`HyperFrames API polling error ${pollResponse.status}: ${body}`);

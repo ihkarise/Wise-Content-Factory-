@@ -217,3 +217,36 @@ test('local JSON provider persists real records to disk and reloads them in a fr
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('local JSON provider: a transient disk write failure does not permanently break later operations', async () => {
+  let writeAttempts = 0;
+  const fakeFs = {
+    readFile: async () => {
+      const err = new Error('ENOENT');
+      err.code = 'ENOENT';
+      throw err;
+    },
+    writeFile: async (...args) => {
+      writeAttempts += 1;
+      if (writeAttempts === 1) throw new Error('ENOSPC: no space left on device');
+      return realWriteFile(...args);
+    },
+  };
+  const dir = await mkdtemp(path.join(tmpdir(), 'wcf-memory-fail-'));
+  const filePath = path.join(dir, 'memory.json');
+  const { writeFile: realWriteFile } = await import('node:fs/promises');
+  try {
+    const provider = createLocalJsonMemoryProvider({ filePath, fsImpl: fakeFs });
+
+    // The failing write should surface its own error to its own caller...
+    await assert.rejects(provider.write('global', 'a', { n: 1 }), /ENOSPC|Failed to persist/);
+
+    // ...but the queue must not stay poisoned: the next write should succeed normally.
+    const written = await provider.write('global', 'b', { n: 2 });
+    assert.equal(written.data.n, 2);
+    const read = await provider.read('global', 'b');
+    assert.equal(read.data.n, 2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

@@ -16,6 +16,9 @@ import { defineProvider } from './providerInterface.js';
 const CAPABILITIES = ['generate_text', 'summarize', 'translate', 'reason', 'analyze'];
 const DEFAULT_MODEL = 'gemini-1.5-flash';
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+// A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch has
+// no default timeout of its own.
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 // Rough public per-token pricing for cost estimation only (not billing-accurate).
 const COST_PER_1K_INPUT_TOKENS_USD = 0.000075;
@@ -49,6 +52,7 @@ export function createGeminiProvider({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { maxOutputTokens: request.input.maxTokens || 512 },
         }),
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

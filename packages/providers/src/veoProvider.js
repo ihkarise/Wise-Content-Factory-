@@ -19,6 +19,11 @@ const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 // per second of output video; this assumes a short ~5s clip as a representative default.
 const COST_PER_VIDEO_USD = 1.75;
 
+// Each individual HTTP call (submit, each poll) gets its own bounded timeout — a hung upstream
+// would otherwise tie up that one call indefinitely regardless of pollUntilComplete's own
+// maxAttempts budget, since an attempt that never resolves never increments the attempt counter.
+const REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * @param {{apiKey?: string, model?: string, id?: string, tier?: string, fetchImpl?: typeof fetch,
  *   pollIntervalMs?: number, maxPollAttempts?: number}} options
@@ -47,6 +52,7 @@ export function createVeoProvider({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ instances: [{ prompt }] }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       if (!submitResponse.ok) {
         const body = await submitResponse.text().catch(() => '');
@@ -57,7 +63,9 @@ export function createVeoProvider({
 
       const final = await pollUntilComplete({
         poll: async () => {
-          const pollResponse = await fetchImpl(`${API_BASE_URL}/${operationName}?key=${apiKey}`);
+          const pollResponse = await fetchImpl(`${API_BASE_URL}/${operationName}?key=${apiKey}`, {
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          });
           if (!pollResponse.ok) {
             const body = await pollResponse.text().catch(() => '');
             throw new Error(`Veo API polling error ${pollResponse.status}: ${body}`);

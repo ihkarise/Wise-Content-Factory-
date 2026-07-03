@@ -15,6 +15,9 @@ import { defineProvider } from './providerInterface.js';
 const CAPABILITIES = ['generate_text', 'summarize', 'translate', 'reason', 'analyze'];
 const DEFAULT_MODEL = 'claude-3-5-haiku-latest';
 const API_URL = 'https://api.anthropic.com/v1/messages';
+// A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch has
+// no default timeout of its own.
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 // Rough public per-token pricing for cost estimation only (not billing-accurate).
 const COST_PER_1K_INPUT_TOKENS_USD = 0.0008;
@@ -52,6 +55,7 @@ export function createAnthropicProvider({
           max_tokens: request.input.maxTokens || 512,
           messages: [{ role: 'user', content: prompt }],
         }),
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

@@ -50,17 +50,36 @@ export function createLocalJsonMemoryProvider({ filePath, id = 'local-json', fsI
   }
 
   function getStore() {
-    if (!storePromise) storePromise = loadStore();
+    if (!storePromise) {
+      // If loadStore() fails (e.g. a transient/permission read error, not a missing file), don't
+      // cache the rejection forever — clear it so the *next* call retries instead of every future
+      // operation on this provider failing with the same stale error.
+      storePromise = loadStore().catch((err) => {
+        storePromise = null;
+        throw err;
+      });
+    }
     return storePromise;
   }
 
   function persist() {
-    writeQueue = writeQueue.then(async () => {
+    // Chain after the previous write regardless of whether it succeeded, so writes stay ordered
+    // without a *permanently* rejected queue: `.then()` on a rejected promise never runs, so
+    // without this `.catch(() => {})`, one transient disk error (e.g. disk full) would poison
+    // `writeQueue` forever — every future read/write/search/list would throw that same stale
+    // error, even though the in-memory store is perfectly healthy. The attempt promise itself
+    // (returned below) still rejects normally, so the *caller* of the failing write still sees it.
+    const attempt = writeQueue.catch(() => {}).then(async () => {
       const store = await getStore();
       const fsModule = await getFs();
-      await fsModule.writeFile(filePath, JSON.stringify(store.toJSON(), null, 2), 'utf8');
+      try {
+        await fsModule.writeFile(filePath, JSON.stringify(store.toJSON(), null, 2), 'utf8');
+      } catch (err) {
+        throw new Error(`Failed to persist memory file "${filePath}": ${err.message}`);
+      }
     });
-    return writeQueue;
+    writeQueue = attempt;
+    return attempt;
   }
 
   async function withStore(fn) {

@@ -86,6 +86,10 @@ request a capability and never reference a provider by name.
   poll budget) with the vendor's own error message where available.
 - **Browser TTS requested outside a browser**: `healthStatus: 'unavailable'`, per above — this is
   the expected, designed-for case in `apps/omniroute-server` (Node), not an error condition.
+- **A hung upstream connection**: every real provider's `fetch` call carries an
+  `AbortSignal.timeout(...)` (Node's `fetch` has no default timeout of its own) — 30s for
+  metadata/generation calls, longer (60s–120s) for calls that transfer real media bytes, so one
+  stalled vendor can't tie up a request indefinitely.
 
 ## Future Extension Notes
 

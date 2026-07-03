@@ -67,6 +67,15 @@ test('POST rejects a request with no Bearer token when OMNIROUTE_API_KEY is conf
   });
 });
 
+test('POST rejects a request with an incorrect Bearer token (same and different length)', async () => {
+  await withServer({ OMNIROUTE_API_KEY: 'shared-secret' }, async (base) => {
+    const sameLength = await fetch(base, { method: 'POST', headers: { authorization: 'Bearer wrong-secret!' }, body: '{}' });
+    assert.equal(sameLength.status, 401);
+    const differentLength = await fetch(base, { method: 'POST', headers: { authorization: 'Bearer x' }, body: '{}' });
+    assert.equal(differentLength.status, 401);
+  });
+});
+
 test('POST is allowed unauthenticated when no OMNIROUTE_API_KEY is configured (dev mode)', async () => {
   await withServer({}, async (base) => {
     const res = await fetch(base, {

@@ -103,6 +103,13 @@ auth, validation, and failure-path tests exercised against a real listening `htt
 - **No `OMNIROUTE_API_KEY` configured**: the server still runs (useful for local development) but
   logs a warning at startup, since this means anyone who can reach the port can spend your AI
   budget.
+- **A hung upstream provider**: every real provider's outbound `fetch` call carries an
+  `AbortSignal.timeout(...)` (30s–120s depending on the call, longer for large media
+  transfers) — see `packages/providers/README.md` — so one stalled vendor connection can't tie up
+  server resources indefinitely.
+- **SIGTERM/SIGINT** (e.g. a rolling deploy or `Ctrl-C`): the server stops accepting new
+  connections and lets in-flight requests finish before exiting, with a 10s hard-exit fallback so
+  it never hangs a deploy.
 
 ## Future Extension Notes
 

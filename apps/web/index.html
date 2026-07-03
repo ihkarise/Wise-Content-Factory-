@@ -42,7 +42,7 @@
 
       <div class="sidebar__gateway" id="gateway-login" hidden>
         <label class="field-label" for="passphrase-input">Owner passphrase</label>
-        <input id="passphrase-input" class="text-input" type="password" placeholder="••••••••" />
+        <input id="passphrase-input" class="text-input" type="password" placeholder="••••••••" autocomplete="current-password" />
         <button id="login-button" class="button button--secondary">Sign in to gateway</button>
         <p class="hint" id="login-hint"></p>
       </div>
@@ -56,6 +56,7 @@
           id="prompt-input"
           class="prompt-editor__input"
           rows="2"
+          aria-label="Describe what you want to create"
           placeholder="Describe what you want — e.g. &quot;Create a blog post explaining migraine for PillFill.&quot;"
         ></textarea>
         <button type="submit" class="button button--primary">Generate</button>

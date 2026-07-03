@@ -71,3 +71,32 @@ export function applyMemoryUpdate(existing, patch, options = {}) {
     audit: { ...existing.audit, updatedAt: now, updatedBy: options.actor ?? existing.audit.updatedBy },
   };
 }
+
+/**
+ * Builds the record a `write()` should persist: version 1 if nothing existed at this
+ * collection/key yet, otherwise `existing.version + 1` with the prior state snapshotted into
+ * `previousVersions` (same bounding as applyMemoryUpdate). Every adapter's `write()` — RecordStore
+ * (in-memory/local-JSON), PropertiesService, Google Drive, Google Sheets — routes through this
+ * instead of recomputing the same create-vs-bump logic, so "what does write() do to an existing
+ * record's version/history/audit" exists exactly once (CLAUDE.md: "never duplicate business logic").
+ * @param {MemoryRecord|null} existing
+ * @param {{collection: string, key: string, data: any, options?: {tags?: string[], relationships?: Object, metadata?: Object, actor?: string}}} fields
+ * @returns {MemoryRecord}
+ */
+export function nextMemoryRecordVersion(existing, { collection, key, data, options = {} }) {
+  return createMemoryRecord({
+    collection,
+    key,
+    data,
+    tags: options.tags,
+    relationships: options.relationships,
+    metadata: options.metadata,
+    version: existing ? existing.version + 1 : 1,
+    previousVersions: existing
+      ? [...existing.previousVersions, { version: existing.version, data: existing.data, updatedAt: existing.audit.updatedAt }]
+      : [],
+    audit: existing
+      ? { createdAt: existing.audit.createdAt, createdBy: existing.audit.createdBy, updatedBy: options.actor }
+      : { createdBy: options.actor, updatedBy: options.actor },
+  });
+}
