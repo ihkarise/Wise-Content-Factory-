@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createIntentObject } from '@wcf/core';
+import { createIntentObject, createExecutionPlan, createPlannedTask } from '@wcf/core';
 import { OmniRoute } from '@wcf/infrastructure';
 import { createMockTextProvider, createMockMediaProvider } from '@wcf/providers';
-import { AgentOrchestrator, registerCoreAgents } from '../src/index.js';
+import { PublishingManager, definePublishingProvider } from '@wcf/publishing';
+import { AgentOrchestrator, registerCoreAgents, createPublishingAgent } from '../src/index.js';
 import { planExecution } from '@wcf/engines';
 
 function buildOmniRoute() {
@@ -124,4 +125,71 @@ test('AgentOrchestrator falls back to a second agent registered for the same cap
   // and it succeeds on its own, so the reliable fallback should never actually be needed.
   assert.equal(run.failed, 0);
   assert.equal(fallbackCalled, false);
+});
+
+test('AgentOrchestrator injects publishingManager into agent context, and Publishing Agent uses it', async () => {
+  const omniroute = buildOmniRoute();
+  const published = [];
+  const publishingManager = new PublishingManager();
+  publishingManager.registerProvider(
+    definePublishingProvider({
+      id: 'fake-instagram',
+      platform: 'instagram',
+      authenticate: async () => ({ authenticated: true }),
+      createDraft: async () => ({}),
+      schedulePublish: async () => ({}),
+      publishNow: async (content) => {
+        published.push(content);
+        return { platformPostId: 'ig-1', status: 'published', nativelyScheduled: true, publishAt: null };
+      },
+      getUploadStatus: async () => ({ status: 'published' }),
+    })
+  );
+  const orchestrator = new AgentOrchestrator({ omniroute, publishingManager });
+  orchestrator.registerAgent(createPublishingAgent());
+
+  const intent = createIntentObject({
+    primaryAction: 'create_asset',
+    brandId: 'pillfill',
+    goal: 'Announce the PillFill launch.',
+    outputTypes: ['caption'],
+    platforms: ['instagram'],
+  });
+  const plan = createExecutionPlan({
+    intentId: intent.id,
+    tasks: [createPlannedTask({ id: 'publish_1', agentCapability: 'publishing', dependsOn: [] })],
+  });
+  const run = await orchestrator.runPlan(plan, { intent });
+
+  assert.equal(run.failed, 0);
+  assert.equal(published.length, 1);
+  assert.equal(published[0].text, 'Announce the PillFill launch.');
+  const publishResult = run.taskResults.publish_1.output.published;
+  assert.equal(publishResult.instagram.ok, true);
+  assert.equal(publishResult.instagram.result.platformPostId, 'ig-1');
+});
+
+test('Publishing Agent skips gracefully (never fails the run) with no publishingManager configured', async () => {
+  const omniroute = buildOmniRoute();
+  const orchestrator = new AgentOrchestrator({ omniroute }); // no publishingManager
+  orchestrator.registerAgent(createPublishingAgent());
+
+  const intent = createIntentObject({
+    primaryAction: 'create_asset', brandId: 'pillfill', goal: 'Announce the launch.',
+    outputTypes: ['caption'], platforms: ['instagram'],
+  });
+  const plan = createExecutionPlan({
+    intentId: intent.id,
+    tasks: [createPlannedTask({ id: 'publish_1', agentCapability: 'publishing', dependsOn: [] })],
+  });
+  const run = await orchestrator.runPlan(plan, { intent });
+
+  assert.equal(run.failed, 0);
+  assert.equal(run.taskResults.publish_1.output.skipped, true);
+});
+
+test('registerCoreAgents includes the Publishing Agent', () => {
+  const omniroute = buildOmniRoute();
+  const orchestrator = registerCoreAgents(new AgentOrchestrator({ omniroute }));
+  assert.equal(orchestrator.listAgentsForCapability('publishing').length, 1);
 });

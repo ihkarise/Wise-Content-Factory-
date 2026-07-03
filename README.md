@@ -14,7 +14,7 @@ campaign. See [`docs/architecture/PRODUCT.md`](docs/architecture/PRODUCT.md) for
 ```bash
 npm install
 npm run example                    # runs Example 1 from docs/architecture/EXAMPLES.md end to end
-npm test                           # 116 tests across every layer
+npm test                           # 139 tests across every layer
 python3 -m http.server 8080        # from the repo root
 # open http://localhost:8080/apps/web/  — a working conversational UI, $0 cost
 ```
@@ -28,10 +28,12 @@ anything** — it is the master development guide for this repository.
 ```
 Conversation Layer   -> Conversation Engine, Intent Engine
 Decision Layer       -> Strategy Engine
-Execution Layer       -> Agent Orchestrator + content Agents
+Execution Layer       -> Agent Orchestrator + content Agents + Publishing Manager
 Infrastructure Layer  -> OmniRoute, Provider Router, Cache, MCP Manager, Security Manager, ...
 Provider Layer         -> pluggable AI provider adapters (text, image, video, voice — see packages/providers/README.md)
-Output Layer            -> Content Package (blog posts, captions, video/image/voice placeholders)
+                          + publishing adapters (Instagram, Facebook, YouTube, LinkedIn, X, Threads
+                          — see packages/publishing/README.md)
+Output Layer            -> Content Package (blog posts, captions, video/image/voice, publish receipts)
 ```
 
 No Engine or Agent ever calls an AI provider directly — every AI request goes through
@@ -46,7 +48,8 @@ packages/core/           Shared schemas: Intent Object, Execution Plan, Capabili
 packages/infrastructure/  OmniRoute, Provider Router, Cache, Cost Optimizer, Retry, MCP Manager + client (NotebookLM), Security Manager
 packages/providers/        AI provider adapters — text, image (FLUX), video (HyperFrames/Veo), voice (Browser TTS/ElevenLabs)
 packages/engines/           Conversation Engine, Intent Engine, Strategy Engine
-packages/agents/             Agent Orchestrator + content Agents (research, script, image, video, voice, seo, qa, ...)
+packages/agents/             Agent Orchestrator + content Agents (research, script, image, video, voice, seo, qa, publishing, ...)
+packages/publishing/          Social publishing adapters — Instagram, Facebook, YouTube, LinkedIn, X, Threads
 apps/web/                     GitHub Pages frontend — zero build step, ES modules + an import map
 apps/gateway/                  Google Apps Script secure backend gateway
 apps/omniroute-server/          Deployable OmniRoute HTTP gateway (real provider routing/failover)
@@ -78,9 +81,9 @@ providers in `packages/providers` — nothing to configure, nothing that costs m
 npm test
 ```
 
-116 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
-`packages/engines`, `packages/agents`, `apps/gateway` (via a Node `vm` harness that loads the
-*actual* `.gs` files with mocked Google Apps Script globals — see
+139 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
+`packages/publishing`, `packages/engines`, `packages/agents`, `apps/gateway` (via a Node `vm`
+harness that loads the *actual* `.gs` files with mocked Google Apps Script globals — see
 [`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)), `apps/omniroute-server`
 (against a real listening `http.Server`), and `examples/` (full pipeline runs of real scenarios
 from `docs/architecture/EXAMPLES.md`).
@@ -110,15 +113,19 @@ implementation began. Notable findings already addressed in this codebase:
 cost-tier routing and failover across real text providers (Anthropic, Gemini, and any
 OpenAI-compatible endpoint — GPT, DeepSeek, OpenRouter, local Ollama models) *and* real media
 providers (images: FLUX, OpenAI-compatible; video: HyperFrames, Veo; voice: Browser TTS,
-ElevenLabs — see `packages/providers/README.md`), a deployable OmniRoute gateway server that
+ElevenLabs — see `packages/providers/README.md`), real social publishing adapters for Instagram,
+Facebook, YouTube, LinkedIn, X, and Threads behind one common interface with a registerable
+Publishing Agent (`packages/publishing/README.md`), a deployable OmniRoute gateway server that
 registers real providers from environment variables (`apps/omniroute-server` — see its README), a
 real MCP client layer with a NotebookLM integration (generic stdio + Streamable HTTP JSON-RPC
 transports, tested against real spawned-process and HTTP MCP servers — see
 `packages/infrastructure/src/mcp/README.md`), the secure gateway's auth/session/secrets/job-queue
 design, and a working conversational frontend.
 
-**What's still open:** social media publishing (Instagram, Facebook, YouTube, LinkedIn, X,
-Threads), a durable datastore for Memory (currently in-process/CacheService-only), bridging the
+**What's still open:** wiring an automatic `'publishing'` task into the Strategy Engine's
+generated plans (today the Publishing Agent exists and works but must be invoked explicitly — see
+`packages/publishing/README.md`'s Architecture section for why that's a deliberate, separate
+decision), a durable datastore for Memory (currently in-process/CacheService-only), bridging the
 `search_knowledge` capability to the MCP Manager inside OmniRoute itself (today Agents call
 `mcpManager` directly instead — see `apps/omniroute-server/README.md`'s Future Extension Notes),
 local image/video/voice models, and MCP integrations beyond NotebookLM (Filesystem, GitHub, Google
