@@ -18,6 +18,7 @@ import {
   createMockMediaProvider,
   createAnthropicProvider,
   createOpenAiCompatibleProvider,
+  createGeminiProvider,
 } from '../../packages/providers/src/index.js';
 
 const MAX_BODY_BYTES = 1_000_000; // 1MB — a capability request body is small text/JSON, never a media upload
@@ -45,6 +46,9 @@ export function registerProvidersFromEnv(omniroute, env = process.env) {
     registerAndTrack(
       createAnthropicProvider({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL })
     );
+  }
+  if (env.GEMINI_API_KEY) {
+    registerAndTrack(createGeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }));
   }
   if (env.OPENAI_API_KEY) {
     registerAndTrack(

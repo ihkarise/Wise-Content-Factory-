@@ -14,7 +14,7 @@ campaign. See [`docs/architecture/PRODUCT.md`](docs/architecture/PRODUCT.md) for
 ```bash
 npm install
 npm run example                    # runs Example 1 from docs/architecture/EXAMPLES.md end to end
-npm test                           # 94 tests across every layer
+npm test                           # 97 tests across every layer
 python3 -m http.server 8080        # from the repo root
 # open http://localhost:8080/apps/web/  — a working conversational UI, $0 cost
 ```
@@ -30,7 +30,7 @@ Conversation Layer   -> Conversation Engine, Intent Engine
 Decision Layer       -> Strategy Engine
 Execution Layer       -> Agent Orchestrator + content Agents
 Infrastructure Layer  -> OmniRoute, Provider Router, Cache, MCP Manager, Security Manager, ...
-Provider Layer         -> pluggable AI provider adapters (mock, Anthropic, OpenAI-compatible)
+Provider Layer         -> pluggable AI provider adapters (mock, Anthropic, Gemini, OpenAI-compatible)
 Output Layer            -> Content Package (blog posts, captions, video/image/voice placeholders)
 ```
 
@@ -44,7 +44,7 @@ No Engine or Agent ever calls an AI provider directly — every AI request goes 
 docs/architecture/     Every architecture spec (converted from the original .docx/.pdf sources)
 packages/core/           Shared schemas: Intent Object, Execution Plan, Capability Request, ...
 packages/infrastructure/  OmniRoute, Provider Router, Cache, Cost Optimizer, Retry, MCP Manager + client (NotebookLM), Security Manager
-packages/providers/        AI provider adapters (mock/local, Anthropic, OpenAI-compatible)
+packages/providers/        AI provider adapters (mock/local, Anthropic, Gemini, OpenAI-compatible)
 packages/engines/           Conversation Engine, Intent Engine, Strategy Engine
 packages/agents/             Agent Orchestrator + content Agents (research, script, image, video, voice, seo, qa, ...)
 apps/web/                     GitHub Pages frontend — zero build step, ES modules + an import map
@@ -78,7 +78,7 @@ providers in `packages/providers` — nothing to configure, nothing that costs m
 npm test
 ```
 
-94 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
+97 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
 `packages/engines`, `packages/agents`, `apps/gateway` (via a Node `vm` harness that loads the
 *actual* `.gs` files with mocked Google Apps Script globals — see
 [`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)), `apps/omniroute-server`
@@ -107,11 +107,13 @@ implementation began. Notable findings already addressed in this codebase:
   `apps/gateway/README.md`.
 
 **What's genuinely done:** the full text-content pipeline, provider abstraction with automatic
-cost-tier routing and failover, a deployable OmniRoute gateway server that registers real
-providers from environment variables (`apps/omniroute-server` — see its README), a real MCP client
-layer with a NotebookLM integration (generic stdio + Streamable HTTP JSON-RPC transports, tested
-against real spawned-process and HTTP MCP servers — see `packages/infrastructure/src/mcp/README.md`),
-the secure gateway's auth/session/secrets/job-queue design, and a working conversational frontend.
+cost-tier routing and failover across real text providers (Anthropic, Gemini, and any
+OpenAI-compatible endpoint — GPT, DeepSeek, OpenRouter, local Ollama models), a deployable
+OmniRoute gateway server that registers real providers from environment variables
+(`apps/omniroute-server` — see its README), a real MCP client layer with a NotebookLM integration
+(generic stdio + Streamable HTTP JSON-RPC transports, tested against real spawned-process and HTTP
+MCP servers — see `packages/infrastructure/src/mcp/README.md`), the secure gateway's
+auth/session/secrets/job-queue design, and a working conversational frontend.
 
 **What's still open:** real image/video/voice providers (currently a documented, zero-cost
 placeholder — see `packages/providers/src/mockMediaProvider.js`), a durable datastore for Memory

@@ -45,6 +45,7 @@ behavior").
 | `PORT` | Port to listen on (default `8787`). |
 | `OMNIROUTE_API_KEY` | Shared secret required as `Authorization: Bearer <key>`. **Unset = unauthenticated dev mode** — the server logs a warning and accepts every request. Always set this before exposing the service beyond localhost. |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Registers the Anthropic provider (`packages/providers/src/anthropicProvider.js`). |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Registers the Gemini provider (`packages/providers/src/geminiProvider.js`) — Google's own request format, not OpenAI-compatible. |
 | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | Registers an OpenAI-compatible provider. |
 | `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL` | Registers DeepSeek via the same OpenAI-compatible adapter. |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Registers a free local-tier provider (e.g. `http://localhost:11434/v1`) — no key needed. |

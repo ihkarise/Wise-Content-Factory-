@@ -26,10 +26,11 @@ test('registerProvidersFromEnv registers real providers only when credentials ar
   const omniroute = new OmniRoute();
   const ids = registerProvidersFromEnv(omniroute, {
     ANTHROPIC_API_KEY: 'sk-ant-test',
+    GEMINI_API_KEY: 'goog-test',
     OPENAI_API_KEY: 'sk-openai-test',
     OLLAMA_BASE_URL: 'http://localhost:11434/v1',
   });
-  assert.deepEqual(ids, ['mock-local-text', 'mock-local-media', 'anthropic', 'openai', 'ollama']);
+  assert.deepEqual(ids, ['mock-local-text', 'mock-local-media', 'anthropic', 'gemini', 'openai', 'ollama']);
 });
 
 test('GET /health reports ok and the registered provider ids', async () => {
