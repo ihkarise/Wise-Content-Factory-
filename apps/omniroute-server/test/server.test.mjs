@@ -29,8 +29,25 @@ test('registerProvidersFromEnv registers real providers only when credentials ar
     GEMINI_API_KEY: 'goog-test',
     OPENAI_API_KEY: 'sk-openai-test',
     OLLAMA_BASE_URL: 'http://localhost:11434/v1',
+    FLUX_API_KEY: 'flux-test',
+    OPENAI_IMAGE_API_KEY: 'sk-openai-image-test',
+    HYPERFRAMES_API_KEY: 'hf-test',
+    VEO_API_KEY: 'veo-test',
+    ELEVENLABS_API_KEY: 'el-test',
   });
-  assert.deepEqual(ids, ['mock-local-text', 'mock-local-media', 'anthropic', 'gemini', 'openai', 'ollama']);
+  assert.deepEqual(ids, [
+    'mock-local-text',
+    'mock-local-media',
+    'anthropic',
+    'gemini',
+    'openai',
+    'ollama',
+    'flux',
+    'openai-image',
+    'hyperframes',
+    'veo',
+    'elevenlabs',
+  ]);
 });
 
 test('GET /health reports ok and the registered provider ids', async () => {

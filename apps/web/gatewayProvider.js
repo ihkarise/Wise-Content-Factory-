@@ -5,7 +5,17 @@
  */
 import { requestCapability, isGatewayConfigured, getStoredSessionToken } from './gatewayClient.js';
 
-const CAPABILITIES = ['generate_text', 'summarize', 'translate', 'reason', 'analyze'];
+const CAPABILITIES = [
+  'generate_text',
+  'summarize',
+  'translate',
+  'reason',
+  'analyze',
+  'generate_image',
+  'generate_video',
+  'generate_speech',
+  'generate_thumbnail',
+];
 
 // ProviderRouter reads `healthStatus` as a plain (non-reactive) property, so this must be
 // re-registered (see app.js's refreshProviders) any time login state changes, rather than

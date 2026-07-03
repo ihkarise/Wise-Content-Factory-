@@ -19,6 +19,11 @@ import {
   createAnthropicProvider,
   createOpenAiCompatibleProvider,
   createGeminiProvider,
+  createFluxProvider,
+  createOpenAiCompatibleImageProvider,
+  createHyperFramesProvider,
+  createVeoProvider,
+  createElevenLabsProvider,
 } from '../../packages/providers/src/index.js';
 
 const MAX_BODY_BYTES = 1_000_000; // 1MB — a capability request body is small text/JSON, never a media upload
@@ -79,6 +84,44 @@ export function registerProvidersFromEnv(omniroute, env = process.env) {
         baseUrl: env.OLLAMA_BASE_URL,
         model: env.OLLAMA_MODEL || 'llama3',
         tier: 'local',
+      })
+    );
+  }
+
+  // Media providers, in the priority order given in docs/architecture/AI_INFRASTRUCTURE.md.
+  // Browser TTS is deliberately not registered here — it requires the browser SpeechSynthesis
+  // API and only makes sense registered directly in apps/web (see that package's app.js).
+  if (env.FLUX_API_KEY) {
+    registerAndTrack(createFluxProvider({ apiKey: env.FLUX_API_KEY, model: env.FLUX_MODEL }));
+  }
+  if (env.OPENAI_IMAGE_API_KEY) {
+    registerAndTrack(
+      createOpenAiCompatibleImageProvider({
+        id: 'openai-image',
+        baseUrl: env.OPENAI_IMAGE_BASE_URL || 'https://api.openai.com/v1',
+        apiKey: env.OPENAI_IMAGE_API_KEY,
+        model: env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
+      })
+    );
+  }
+  if (env.HYPERFRAMES_API_KEY) {
+    registerAndTrack(
+      createHyperFramesProvider({
+        apiKey: env.HYPERFRAMES_API_KEY,
+        baseUrl: env.HYPERFRAMES_BASE_URL,
+        model: env.HYPERFRAMES_MODEL,
+      })
+    );
+  }
+  if (env.VEO_API_KEY) {
+    registerAndTrack(createVeoProvider({ apiKey: env.VEO_API_KEY, model: env.VEO_MODEL }));
+  }
+  if (env.ELEVENLABS_API_KEY) {
+    registerAndTrack(
+      createElevenLabsProvider({
+        apiKey: env.ELEVENLABS_API_KEY,
+        voiceId: env.ELEVENLABS_VOICE_ID,
+        model: env.ELEVENLABS_MODEL,
       })
     );
   }

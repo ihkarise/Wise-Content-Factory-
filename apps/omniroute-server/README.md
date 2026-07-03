@@ -49,6 +49,11 @@ behavior").
 | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | Registers an OpenAI-compatible provider. |
 | `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL` | Registers DeepSeek via the same OpenAI-compatible adapter. |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | Registers a free local-tier provider (e.g. `http://localhost:11434/v1`) — no key needed. |
+| `FLUX_API_KEY`, `FLUX_MODEL` | Registers the FLUX image provider (`packages/providers/src/fluxProvider.js`) — first priority for `generate_image`. |
+| `OPENAI_IMAGE_API_KEY`, `OPENAI_IMAGE_BASE_URL`, `OPENAI_IMAGE_MODEL` | Registers an OpenAI-compatible image provider — second priority for `generate_image`. |
+| `HYPERFRAMES_API_KEY`, `HYPERFRAMES_BASE_URL`, `HYPERFRAMES_MODEL` | Registers the HyperFrames video provider — first priority for `generate_video`. |
+| `VEO_API_KEY`, `VEO_MODEL` | Registers the Google Veo video provider (via the Gemini API) — second priority for `generate_video`. |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL` | Registers the ElevenLabs voice provider — used whenever the zero-cost Browser TTS tier isn't available (this server runs in Node, so Browser TTS is never registered here — see `packages/providers/README.md`). |
 
 The local mock text/media providers (`packages/providers/src/mockProvider.js`,
 `mockMediaProvider.js`) are **always** registered regardless of configuration, so the service
