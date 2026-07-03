@@ -3,6 +3,7 @@ export * from './costOptimizer.js';
 export * from './retryManager.js';
 export * from './providerRouter.js';
 export * from './mcpManager.js';
+export * from './mcp/index.js';
 export * from './configManager.js';
 export * from './securityManager.js';
 export * from './observability.js';

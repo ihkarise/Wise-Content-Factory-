@@ -14,7 +14,7 @@ campaign. See [`docs/architecture/PRODUCT.md`](docs/architecture/PRODUCT.md) for
 ```bash
 npm install
 npm run example                    # runs Example 1 from docs/architecture/EXAMPLES.md end to end
-npm test                           # 76 tests across every layer
+npm test                           # 83 tests across every layer
 python3 -m http.server 8080        # from the repo root
 # open http://localhost:8080/apps/web/  — a working conversational UI, $0 cost
 ```
@@ -43,7 +43,7 @@ No Engine or Agent ever calls an AI provider directly — every AI request goes 
 ```
 docs/architecture/     Every architecture spec (converted from the original .docx/.pdf sources)
 packages/core/           Shared schemas: Intent Object, Execution Plan, Capability Request, ...
-packages/infrastructure/  OmniRoute, Provider Router, Cache, Cost Optimizer, Retry, MCP Manager, Security Manager
+packages/infrastructure/  OmniRoute, Provider Router, Cache, Cost Optimizer, Retry, MCP Manager + client (NotebookLM), Security Manager
 packages/providers/        AI provider adapters (mock/local, Anthropic, OpenAI-compatible)
 packages/engines/           Conversation Engine, Intent Engine, Strategy Engine
 packages/agents/             Agent Orchestrator + content Agents (research, script, image, video, voice, seo, qa, ...)
@@ -74,7 +74,7 @@ providers in `packages/providers` — nothing to configure, nothing that costs m
 npm test
 ```
 
-76 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
+83 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
 `packages/engines`, `packages/agents`, `apps/gateway` (via a Node `vm` harness that loads the
 *actual* `.gs` files with mocked Google Apps Script globals — see
 [`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)), and `examples/` (full
@@ -102,14 +102,16 @@ implementation began. Notable findings already addressed in this codebase:
   `apps/gateway/README.md`.
 
 **What's genuinely done:** the full text-content pipeline, provider abstraction with automatic
-cost-tier routing and failover, MCP-manager abstraction (no real MCP servers wired in yet), the
-secure gateway's auth/session/secrets/job-queue design, and a working conversational frontend.
+cost-tier routing and failover, a real MCP client layer with a NotebookLM integration (generic
+stdio + Streamable HTTP JSON-RPC transports, tested against real spawned-process and HTTP MCP
+servers — see `packages/infrastructure/src/mcp/README.md`), the secure gateway's
+auth/session/secrets/job-queue design, and a working conversational frontend.
 
 **What's still open:** real image/video/voice providers (currently a documented, zero-cost
 placeholder — see `packages/providers/src/mockMediaProvider.js`), a durable datastore for Memory
-(currently in-process/CacheService-only), and a real MCP server connection (NotebookLM etc.) —
-all deliberately deferred rather than half-implemented, per `CLAUDE.md`'s "no placeholder
-implementations unless explicitly documented as future work."
+(currently in-process/CacheService-only), and MCP integrations beyond NotebookLM (Filesystem,
+GitHub, Google Drive) — all deliberately deferred rather than half-implemented, per `CLAUDE.md`'s
+"no placeholder implementations unless explicitly documented as future work."
 
 ## License
 
