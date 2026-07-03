@@ -12,7 +12,9 @@ file in an Apps Script project is concatenated into one shared global scope. So 
 deliberately does **not** import `packages/*` directly; it re-implements the small amount of logic
 it actually needs (session signing, redaction, rate limiting) in plain global functions. If you
 change the token format in `packages/infrastructure/src/securityManager.js`, update `Auth.gs` to
-match — `test/gateway.test.mjs` cross-checks both implementations produce compatible tokens.
+match. The two are independent implementations for independent runtimes (Node vs. GAS's
+`Utilities` service) — `test/gateway.test.mjs` exercises `Auth.gs`'s own round-trip, it does not
+cross-verify tokens between the two implementations.
 
 ## Deployment configuration (read this before deploying)
 
