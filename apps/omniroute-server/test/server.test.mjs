@@ -29,8 +29,25 @@ test('registerProvidersFromEnv registers real providers only when credentials ar
     GEMINI_API_KEY: 'goog-test',
     OPENAI_API_KEY: 'sk-openai-test',
     OLLAMA_BASE_URL: 'http://localhost:11434/v1',
+    FLUX_API_KEY: 'flux-test',
+    OPENAI_IMAGE_API_KEY: 'sk-openai-image-test',
+    HYPERFRAMES_API_KEY: 'hf-test',
+    VEO_API_KEY: 'veo-test',
+    ELEVENLABS_API_KEY: 'el-test',
   });
-  assert.deepEqual(ids, ['mock-local-text', 'mock-local-media', 'anthropic', 'gemini', 'openai', 'ollama']);
+  assert.deepEqual(ids, [
+    'mock-local-text',
+    'mock-local-media',
+    'anthropic',
+    'gemini',
+    'openai',
+    'ollama',
+    'flux',
+    'openai-image',
+    'hyperframes',
+    'veo',
+    'elevenlabs',
+  ]);
 });
 
 test('GET /health reports ok and the registered provider ids', async () => {
@@ -47,6 +64,15 @@ test('POST rejects a request with no Bearer token when OMNIROUTE_API_KEY is conf
   await withServer({ OMNIROUTE_API_KEY: 'shared-secret' }, async (base) => {
     const res = await fetch(base, { method: 'POST', body: '{}' });
     assert.equal(res.status, 401);
+  });
+});
+
+test('POST rejects a request with an incorrect Bearer token (same and different length)', async () => {
+  await withServer({ OMNIROUTE_API_KEY: 'shared-secret' }, async (base) => {
+    const sameLength = await fetch(base, { method: 'POST', headers: { authorization: 'Bearer wrong-secret!' }, body: '{}' });
+    assert.equal(sameLength.status, 401);
+    const differentLength = await fetch(base, { method: 'POST', headers: { authorization: 'Bearer x' }, body: '{}' });
+    assert.equal(differentLength.status, 401);
   });
 });
 

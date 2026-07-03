@@ -16,6 +16,7 @@ import {
   decryptSecret,
   signSessionToken,
   verifySessionToken,
+  timingSafeEqualStrings,
   ObservabilityLog,
   OmniRoute,
 } from '../src/index.js';
@@ -31,6 +32,18 @@ test('CacheEngine hits on identical capability + input, misses on different inpu
   assert.equal(cache.get(req3), undefined);
   assert.equal(cache.stats().hits, 1);
   assert.equal(cache.stats().misses, 2);
+});
+
+test('createInMemoryCacheStore evicts the oldest entry once maxEntries is exceeded, so a long-running process cannot grow it without bound', () => {
+  const store = createInMemoryCacheStore({ maxEntries: 3 });
+  store.set('a', 1, 60_000);
+  store.set('b', 2, 60_000);
+  store.set('c', 3, 60_000);
+  assert.equal(store.size(), 3);
+  store.set('d', 4, 60_000);
+  assert.equal(store.size(), 3, 'size should stay capped at maxEntries');
+  assert.equal(store.get('a'), undefined, 'oldest entry should have been evicted');
+  assert.equal(store.get('d'), 4, 'newest entry should still be present');
 });
 
 test('tierRank orders local-first waterfall correctly', () => {
@@ -194,4 +207,19 @@ test('OmniRoute throws a clear error when no provider supports the capability', 
   const omniroute = new OmniRoute();
   const request = createCapabilityRequest({ capability: 'generate_video', input: {} });
   await assert.rejects(omniroute.request(request), /No provider registered/);
+});
+
+test('ObservabilityLog bounds its event buffer so a long-running process cannot grow it without limit', () => {
+  const log = new ObservabilityLog({ maxEvents: 5 });
+  for (let i = 0; i < 12; i += 1) log.record({ i });
+  const events = log.getEvents();
+  assert.equal(events.length, 5, 'buffer should stay capped at maxEvents');
+  assert.equal(events[0].i, 7, 'oldest events should have been dropped, newest 5 retained');
+  assert.equal(events[4].i, 11);
+});
+
+test('timingSafeEqualStrings correctly compares equal/unequal/different-length strings', () => {
+  assert.equal(timingSafeEqualStrings('secret-value', 'secret-value'), true);
+  assert.equal(timingSafeEqualStrings('secret-value', 'wrong-value!'), false);
+  assert.equal(timingSafeEqualStrings('short', 'a-much-longer-string'), false);
 });

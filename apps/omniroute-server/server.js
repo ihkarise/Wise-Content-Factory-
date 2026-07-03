@@ -11,7 +11,7 @@
  * framework. See `apps/omniroute-server/README.md` for configuration and deployment notes.
  */
 import { createServer } from 'node:http';
-import { OmniRoute, redact } from '../../packages/infrastructure/src/index.js';
+import { OmniRoute, redact, timingSafeEqualStrings } from '../../packages/infrastructure/src/index.js';
 import { validateCapabilityRequest } from '../../packages/core/src/index.js';
 import {
   createMockTextProvider,
@@ -19,6 +19,11 @@ import {
   createAnthropicProvider,
   createOpenAiCompatibleProvider,
   createGeminiProvider,
+  createFluxProvider,
+  createOpenAiCompatibleImageProvider,
+  createHyperFramesProvider,
+  createVeoProvider,
+  createElevenLabsProvider,
 } from '../../packages/providers/src/index.js';
 
 const MAX_BODY_BYTES = 1_000_000; // 1MB — a capability request body is small text/JSON, never a media upload
@@ -83,6 +88,44 @@ export function registerProvidersFromEnv(omniroute, env = process.env) {
     );
   }
 
+  // Media providers, in the priority order given in docs/architecture/AI_INFRASTRUCTURE.md.
+  // Browser TTS is deliberately not registered here — it requires the browser SpeechSynthesis
+  // API and only makes sense registered directly in apps/web (see that package's app.js).
+  if (env.FLUX_API_KEY) {
+    registerAndTrack(createFluxProvider({ apiKey: env.FLUX_API_KEY, model: env.FLUX_MODEL }));
+  }
+  if (env.OPENAI_IMAGE_API_KEY) {
+    registerAndTrack(
+      createOpenAiCompatibleImageProvider({
+        id: 'openai-image',
+        baseUrl: env.OPENAI_IMAGE_BASE_URL || 'https://api.openai.com/v1',
+        apiKey: env.OPENAI_IMAGE_API_KEY,
+        model: env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
+      })
+    );
+  }
+  if (env.HYPERFRAMES_API_KEY) {
+    registerAndTrack(
+      createHyperFramesProvider({
+        apiKey: env.HYPERFRAMES_API_KEY,
+        baseUrl: env.HYPERFRAMES_BASE_URL,
+        model: env.HYPERFRAMES_MODEL,
+      })
+    );
+  }
+  if (env.VEO_API_KEY) {
+    registerAndTrack(createVeoProvider({ apiKey: env.VEO_API_KEY, model: env.VEO_MODEL }));
+  }
+  if (env.ELEVENLABS_API_KEY) {
+    registerAndTrack(
+      createElevenLabsProvider({
+        apiKey: env.ELEVENLABS_API_KEY,
+        voiceId: env.ELEVENLABS_VOICE_ID,
+        model: env.ELEVENLABS_MODEL,
+      })
+    );
+  }
+
   return registered;
 }
 
@@ -129,7 +172,9 @@ function isAuthorized(req, apiKey) {
   if (!apiKey) return true; // no shared secret configured — dev mode, see README "Configuration"
   const header = req.headers.authorization || '';
   const [scheme, token] = header.split(' ');
-  return scheme === 'Bearer' && token === apiKey;
+  // Constant-time comparison — a plain `===` here would let response-time measurement narrow
+  // down the shared secret character by character.
+  return scheme === 'Bearer' && Boolean(token) && timingSafeEqualStrings(token, apiKey);
 }
 
 /**
@@ -193,4 +238,19 @@ if (isMain) {
   server.listen(port, () => {
     console.log(`OmniRoute gateway listening on :${port}`);
   });
+
+  // Graceful shutdown: stop accepting new connections and let in-flight requests finish instead
+  // of being killed mid-request — matters for rolling deploys/container orchestrators, which send
+  // SIGTERM before forcibly killing the process.
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}, shutting down gracefully…`);
+    server.close(() => process.exit(0));
+    // Belt-and-suspenders: don't hang forever if a connection never closes on its own.
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }

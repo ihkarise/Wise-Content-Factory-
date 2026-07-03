@@ -1,0 +1,11 @@
+{
+  "name": "@wcf/publishing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Social platform publishing adapters (Instagram, Facebook, YouTube, LinkedIn, X, Threads). Every provider implements the same interface (see publishingProviderInterface.js) so the Publishing Agent never depends on a specific platform's API shape.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

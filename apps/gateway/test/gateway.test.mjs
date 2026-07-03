@@ -154,3 +154,42 @@ test('doGet returns a health check payload', () => {
   const output = gw.doGet();
   assert.equal(JSON.parse(output.getContent()).status, 'ok');
 });
+
+test('memoryWrite_/memoryRead_ round-trip a record with version 1 and audit timestamps', () => {
+  const gw = loadGateway({ scriptProperties: BASE_PROPERTIES });
+  const written = gw.memoryWrite_('global', 'featureFlags', { betaEnabled: true }, { tags: ['config'] });
+  assert.equal(written.version, 1);
+  assert.deepEqual(written.tags, ['config']);
+  const read = gw.memoryRead_('global', 'featureFlags');
+  // Objects built inside the vm sandbox (e.g. via JSON.parse there) have a different realm's
+  // Object.prototype than this test file, so deepEqual needs both sides normalized through JSON
+  // first — same reason other tests in this file compare individual fields instead.
+  assert.deepEqual(JSON.parse(JSON.stringify(read.data)), { betaEnabled: true });
+});
+
+test('memoryUpdate_ merges the patch into existing data and bumps the version', () => {
+  const gw = loadGateway({ scriptProperties: BASE_PROPERTIES });
+  gw.memoryWrite_('global', 'featureFlags', { betaEnabled: true, theme: 'dark' });
+  const updated = gw.memoryUpdate_('global', 'featureFlags', { betaEnabled: false });
+  assert.equal(updated.version, 2);
+  assert.deepEqual(JSON.parse(JSON.stringify(updated.data)), { betaEnabled: false, theme: 'dark' });
+  assert.equal(updated.previousVersions.length, 1);
+});
+
+test('memoryUpdate_ throws a clear error for a key that was never written', () => {
+  const gw = loadGateway({ scriptProperties: BASE_PROPERTIES });
+  assert.throws(() => gw.memoryUpdate_('global', 'missing', {}), /no record/);
+});
+
+test('memoryDelete_/memoryList_/memorySearch_ work against real PropertiesService semantics', () => {
+  const gw = loadGateway({ scriptProperties: BASE_PROPERTIES });
+  gw.memoryWrite_('global', 'a', { n: 1 }, { tags: ['x'] });
+  gw.memoryWrite_('global', 'b', { n: 2 }, { tags: ['y'] });
+
+  assert.equal(gw.memoryList_('global').length, 2);
+  assert.equal(gw.memorySearch_('global', { tags: ['x'] }).length, 1);
+
+  assert.equal(gw.memoryDelete_('global', 'a'), true);
+  assert.equal(gw.memoryRead_('global', 'a'), null);
+  assert.equal(gw.memoryList_('global').length, 1);
+});

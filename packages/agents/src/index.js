@@ -13,6 +13,7 @@ import {
   createCaptionAgent,
   createSeoAgent,
   createQaAgent,
+  createPublishingAgent,
 } from './agents/index.js';
 
 /**
@@ -32,6 +33,7 @@ export function registerCoreAgents(orchestrator) {
     createCaptionAgent(),
     createSeoAgent(),
     createQaAgent(),
+    createPublishingAgent(),
   ].forEach((agent) => orchestrator.registerAgent(agent));
   return orchestrator;
 }

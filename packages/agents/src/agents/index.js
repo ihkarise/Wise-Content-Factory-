@@ -8,3 +8,4 @@ export * from './voiceAgent.js';
 export * from './captionAgent.js';
 export * from './seoAgent.js';
 export * from './qaAgent.js';
+export * from './publishingAgent.js';

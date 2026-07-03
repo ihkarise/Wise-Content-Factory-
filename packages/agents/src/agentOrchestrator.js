@@ -12,12 +12,14 @@ import { createContentPackage, createContentAsset } from '@wcf/core';
 
 export class AgentOrchestrator {
   /**
-   * @param {{omniroute: import('@wcf/infrastructure').OmniRoute, mcpManager?: import('@wcf/infrastructure').McpManager}} deps
+   * @param {{omniroute: import('@wcf/infrastructure').OmniRoute, mcpManager?: import('@wcf/infrastructure').McpManager,
+   *   publishingManager?: import('@wcf/publishing').PublishingManager}} deps
    */
   constructor(deps) {
     if (!deps?.omniroute) throw new Error('AgentOrchestrator requires an OmniRoute instance — agents never call providers directly.');
     this.omniroute = deps.omniroute;
     this.mcpManager = deps.mcpManager ?? null;
+    this.publishingManager = deps.publishingManager ?? null;
     /** @type {Map<string, Array<{name: string, capabilities: string[], priority: number, run: Function}>>} */
     this.agentsByCapability = new Map();
   }
@@ -121,6 +123,7 @@ export class AgentOrchestrator {
         const result = await agent.run(task, {
           omniroute: this.omniroute,
           mcpManager: this.mcpManager,
+          publishingManager: this.publishingManager,
           ...ctx,
         });
         return { ok: true, result: { ...result, agentName: agent.name } };

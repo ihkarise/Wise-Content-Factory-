@@ -37,11 +37,14 @@ let orchestrator;
 function buildOmniRoute() {
   const route = new OmniRoute();
   if (isGatewayConfigured()) {
-    // Production configuration: real AI via the secure gateway. Media capabilities still fall
-    // back to the free local placeholder until a real image/video/voice provider is wired into
-    // apps/gateway/OmniRouteProxy.gs — see that file's comments.
+    // Production configuration: real AI via the secure gateway, including media (image/video/
+    // voice) now that apps/omniroute-server registers real FLUX/HyperFrames/Veo/ElevenLabs
+    // providers when OMNIROUTE_ENDPOINT is set — see that package's README. The free local mock
+    // media provider is deliberately *not* registered here, mirroring how mockTextProvider is
+    // never registered alongside the gateway either: cost-tier ranking always prefers the
+    // cheapest healthy provider, and the free mock would otherwise win over real generation on
+    // every request.
     route.registerProvider(createGatewayProvider());
-    route.registerProvider(createMockMediaProvider());
   } else {
     // No gateway configured: zero-cost, zero-setup local demo mode.
     route.registerProvider(createMockTextProvider());

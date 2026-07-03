@@ -9,9 +9,14 @@
 import { defineProvider } from './providerInterface.js';
 
 const CAPABILITIES = ['generate_text', 'summarize', 'translate', 'reason', 'analyze'];
+// A hung upstream connection would otherwise tie up the request indefinitely — Node's fetch has
+// no default timeout of its own. Local models (Ollama etc.) get a longer allowance since they can
+// be much slower on modest hardware.
+const DEFAULT_TIMEOUT_MS = 30_000;
+const LOCAL_TIMEOUT_MS = 120_000;
 
 /**
- * @param {{id: string, baseUrl: string, apiKey?: string, model: string, tier?: string, costPer1kTokensUsd?: number, fetchImpl?: typeof fetch}} options
+ * @param {{id: string, baseUrl: string, apiKey?: string, model: string, tier?: string, costPer1kTokensUsd?: number, fetchImpl?: typeof fetch, timeoutMs?: number}} options
  */
 export function createOpenAiCompatibleProvider({
   id,
@@ -21,6 +26,7 @@ export function createOpenAiCompatibleProvider({
   tier = 'low_cost',
   costPer1kTokensUsd = 0.001,
   fetchImpl = globalThis.fetch,
+  timeoutMs,
 } = {}) {
   // A local endpoint (e.g. http://localhost:11434 for Ollama) needs no API key and is free.
   const isLocalEndpoint = /localhost|127\.0\.0\.1/.test(baseUrl || '');
@@ -43,6 +49,7 @@ export function createOpenAiCompatibleProvider({
           ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify({ model, messages }),
+        signal: AbortSignal.timeout(timeoutMs ?? (isLocalEndpoint ? LOCAL_TIMEOUT_MS : DEFAULT_TIMEOUT_MS)),
       });
       if (!response.ok) {
         const body = await response.text().catch(() => '');

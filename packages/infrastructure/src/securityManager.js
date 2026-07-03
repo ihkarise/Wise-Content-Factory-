@@ -83,7 +83,14 @@ export function verifySessionToken(token, signingSecret) {
   return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
 }
 
-function timingSafeEqualStrings(a, b) {
+/**
+ * Constant-time string comparison — use this (never `===`/`!==`) for any secret/token/passphrase
+ * comparison, so a mismatch can't be distinguished by response-time measurement. Exported for
+ * reuse anywhere else in the platform that compares a caller-supplied credential against an
+ * expected value (e.g. apps/omniroute-server's shared-secret Bearer token check).
+ * @param {string} a @param {string} b
+ */
+export function timingSafeEqualStrings(a, b) {
   if (a.length !== b.length) return false;
   let mismatch = 0;
   for (let i = 0; i < a.length; i += 1) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);

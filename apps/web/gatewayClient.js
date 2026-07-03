@@ -17,16 +17,32 @@ export function isGatewayConfigured() {
   return Boolean(GATEWAY_URL);
 }
 
+// localStorage can throw (not just return null) in some browser configurations — e.g. Safari
+// private browsing historically, or an org policy disabling site storage — so every access is
+// guarded rather than left to crash the caller for what should be a soft "not signed in" state.
 export function getStoredSessionToken() {
-  return localStorage.getItem(SESSION_STORAGE_KEY);
+  try {
+    return localStorage.getItem(SESSION_STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function storeSessionToken(token) {
-  localStorage.setItem(SESSION_STORAGE_KEY, token);
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, token);
+  } catch {
+    // Session simply won't persist across reloads in this environment — the login itself still
+    // succeeded, so don't fail the caller over it.
+  }
 }
 
 export function clearSessionToken() {
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // Nothing to clean up if storage was never writable in the first place.
+  }
 }
 
 /**
@@ -40,7 +56,13 @@ async function callGateway(action, payload = {}) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, ...payload }),
   });
-  const data = await response.json();
+  if (!response.ok) throw new Error(`Gateway returned HTTP ${response.status}. Check GATEWAY_URL and that the Apps Script deployment is live.`);
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('Gateway returned a response that was not valid JSON — check the deployed Apps Script for errors.');
+  }
   if (!data.ok) throw new Error(data.error || 'Gateway request failed');
   return data.result;
 }

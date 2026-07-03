@@ -29,7 +29,9 @@ function handleLogin_(request) {
   // encrypted via Secrets.gs) is issued an "owner" session. Swap this for real per-user auth
   // before scaling past a single owner/small team — see SECURITY_ARCHITECTURE.md, Contradiction #7.
   var expected = getDecryptedScriptSecret_('OWNER_PASSPHRASE');
-  if (!request.passphrase || request.passphrase !== expected) {
+  // Constant-time comparison (see Auth.gs's timingSafeEqual_) — a plain !== here would let
+  // response-time measurement narrow down the passphrase character by character.
+  if (!request.passphrase || !timingSafeEqual_(String(request.passphrase), expected)) {
     throw new Error('Invalid credentials');
   }
   var token = issueSession_(request.userId || 'owner', 'owner');
