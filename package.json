@@ -8,8 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "node --test packages/*/test/*.test.js apps/gateway/test/*.test.mjs examples/*.test.js",
-    "example": "node examples/run-example.mjs"
+    "test": "node --test packages/*/test/*.test.js apps/gateway/test/*.test.mjs apps/omniroute-server/test/*.test.mjs examples/*.test.js",
+    "example": "node examples/run-example.mjs",
+    "omniroute:serve": "node apps/omniroute-server/server.js"
   },
   "engines": {
     "node": ">=18.0.0"

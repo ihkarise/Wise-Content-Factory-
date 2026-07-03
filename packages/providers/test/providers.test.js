@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCapabilityRequest } from '@wcf/core';
-import { defineProvider, createMockTextProvider, createMockMediaProvider, createAnthropicProvider, createOpenAiCompatibleProvider } from '../src/index.js';
+import { defineProvider, createMockTextProvider, createMockMediaProvider, createAnthropicProvider, createOpenAiCompatibleProvider, createGeminiProvider } from '../src/index.js';
 
 test('defineProvider throws when required functions are missing', () => {
   assert.throws(() => defineProvider({ id: 'broken' }), /missing required function/);
@@ -112,4 +112,36 @@ test('openAiCompatibleProvider authorizes with a bearer token for a remote endpo
   const request = createCapabilityRequest({ capability: 'generate_text', input: { prompt: 'hi' } });
   await provider.execute(request);
   assert.equal(capturedHeaders.authorization, 'Bearer ds-key');
+});
+
+test('gemini provider is marked unavailable with no API key, so the router will skip it', () => {
+  const provider = createGeminiProvider({});
+  assert.equal(provider.healthStatus, 'unavailable');
+});
+
+test('gemini provider calls generateContent and returns text output when a key is present', async () => {
+  let capturedUrl;
+  let capturedBody;
+  const fakeFetch = async (url, init) => {
+    capturedUrl = url;
+    capturedBody = JSON.parse(init.body);
+    return {
+      ok: true,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'Hello from Gemini' }] } }] }),
+    };
+  };
+  const provider = createGeminiProvider({ apiKey: 'goog-test', fetchImpl: fakeFetch });
+  assert.equal(provider.healthStatus, 'healthy');
+  const request = createCapabilityRequest({ capability: 'generate_text', input: { prompt: 'Say hi' } });
+  const result = await provider.execute(request);
+  assert.equal(result.output, 'Hello from Gemini');
+  assert.match(capturedUrl, /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-1\.5-flash:generateContent\?key=goog-test$/);
+  assert.equal(capturedBody.contents[0].parts[0].text, 'Say hi');
+});
+
+test('gemini provider surfaces a clear error on a non-ok API response', async () => {
+  const fakeFetch = async () => ({ ok: false, status: 429, text: async () => 'quota exceeded' });
+  const provider = createGeminiProvider({ apiKey: 'goog-test', fetchImpl: fakeFetch });
+  const request = createCapabilityRequest({ capability: 'generate_text', input: { prompt: 'hi' } });
+  await assert.rejects(provider.execute(request), /Gemini API error 429/);
 });
