@@ -1,0 +1,11 @@
+{
+  "name": "@wcf/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared schemas and utilities used across every Wise Content Factory layer.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

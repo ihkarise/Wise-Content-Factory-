@@ -1,0 +1,14 @@
+{
+  "name": "@wcf/engines",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Conversation, Intent, and Strategy Engines — the Conversation and Decision layers. These engines think and plan; they never generate content and never call an AI provider directly.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@wcf/core": "0.1.0"
+  }
+}

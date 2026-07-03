@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wise Content Factory</title>
+  <meta name="description" content="An AI Content Operating System — turn one idea into a complete marketing campaign." />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "@wcf/core": "../../packages/core/src/index.js",
+        "@wcf/infrastructure": "../../packages/infrastructure/src/index.js",
+        "@wcf/infrastructure/": "../../packages/infrastructure/src/",
+        "@wcf/providers": "../../packages/providers/src/index.js",
+        "@wcf/engines": "../../packages/engines/src/index.js",
+        "@wcf/agents": "../../packages/agents/src/index.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand-mark">
+        <span class="brand-mark__dot"></span>
+        Wise Content Factory
+      </div>
+
+      <label class="field-label" for="brand-select">Brand</label>
+      <select id="brand-select" class="select"></select>
+
+      <label class="field-label" for="quality-select">Quality level</label>
+      <select id="quality-select" class="select">
+        <option value="economy">Economy</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="professional">Professional</option>
+        <option value="premium">Premium</option>
+      </select>
+
+      <div class="sidebar__status" id="provider-status" aria-live="polite"></div>
+
+      <div class="sidebar__gateway" id="gateway-login" hidden>
+        <label class="field-label" for="passphrase-input">Owner passphrase</label>
+        <input id="passphrase-input" class="text-input" type="password" placeholder="••••••••" />
+        <button id="login-button" class="button button--secondary">Sign in to gateway</button>
+        <p class="hint" id="login-hint"></p>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="thread" id="thread" aria-live="polite"></div>
+
+      <form class="prompt-editor" id="prompt-form">
+        <textarea
+          id="prompt-input"
+          class="prompt-editor__input"
+          rows="2"
+          placeholder="Describe what you want — e.g. &quot;Create a blog post explaining migraine for PillFill.&quot;"
+        ></textarea>
+        <button type="submit" class="button button--primary">Generate</button>
+      </form>
+    </main>
+
+    <aside class="inspector">
+      <h2 class="inspector__title">Execution Plan</h2>
+      <div id="plan-panel" class="inspector__panel">
+        <p class="hint">Your plan will appear here once you send a request.</p>
+      </div>
+
+      <h2 class="inspector__title">Content Package</h2>
+      <div id="package-panel" class="inspector__panel">
+        <p class="hint">Generated assets will appear here.</p>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

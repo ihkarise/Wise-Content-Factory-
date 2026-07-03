@@ -1,0 +1,19 @@
+{
+  "name": "@wcf/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent Orchestrator (Execution layer) and the content Agents it coordinates. Agents generate, transform, validate, and export; they never coordinate each other and never select AI providers directly — every AI call goes through the injected OmniRoute client.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@wcf/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@wcf/infrastructure": "0.1.0",
+    "@wcf/providers": "0.1.0",
+    "@wcf/engines": "0.1.0"
+  }
+}

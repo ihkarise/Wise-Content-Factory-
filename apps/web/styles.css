@@ -1,0 +1,289 @@
+/* Design tokens from docs/architecture/DESIGN_SYSTEM.md */
+:root {
+  --color-primary: #244a9b;
+  --color-secondary: #d7264e;
+  --color-accent: #018080;
+
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-border: #e2e5ec;
+  --color-text: #14181f;
+  --color-text-muted: #5b6472;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-1: 0 1px 2px rgba(20, 24, 31, 0.06);
+  --shadow-2: 0 4px 12px rgba(20, 24, 31, 0.08);
+  --shadow-3: 0 12px 32px rgba(20, 24, 31, 0.12);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Sora', var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #10131a;
+    --color-surface: #171b24;
+    --color-border: #2a2f3b;
+    --color-text: #eef1f6;
+    --color-text-muted: #9aa3b2;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  min-height: 100vh;
+}
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar, .inspector { border: none; border-bottom: 1px solid var(--color-border); }
+}
+
+.sidebar, .inspector {
+  background: var(--color-surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar { border-right: 1px solid var(--color-border); }
+.inspector { border-left: 1px solid var(--color-border); overflow-y: auto; }
+
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.brand-mark__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: inline-block;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.select, .text-input {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.sidebar__status {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.sidebar__gateway {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* [hidden] and .sidebar__gateway{display:flex} have equal specificity, so without this the
+   `hidden` attribute set by app.js would silently lose to the flex display and stay visible. */
+.sidebar__gateway[hidden] {
+  display: none;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.button {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.button:active { transform: scale(0.98); }
+
+.button--primary {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-1);
+}
+
+.button--primary:hover { box-shadow: var(--shadow-2); }
+
+.button--secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.thread {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.message {
+  max-width: 70ch;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.message--user {
+  align-self: flex-end;
+  background: var(--color-primary);
+  color: white;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.message--system {
+  align-self: flex-start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.message--error {
+  align-self: flex-start;
+  background: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+  border: 1px solid var(--color-secondary);
+}
+
+.prompt-editor {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-2);
+}
+
+.prompt-editor__input {
+  flex: 1;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  outline: none;
+}
+
+.inspector__title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  margin: var(--space-2) 0 0;
+}
+
+.inspector__panel {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  font-size: 0.85rem;
+}
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.task-row:last-child { border-bottom: none; }
+
+.task-status {
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.task-status--completed { background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-accent); }
+.task-status--failed { background: color-mix(in srgb, var(--color-secondary) 18%, transparent); color: var(--color-secondary); }
+.task-status--skipped { background: color-mix(in srgb, var(--color-text-muted) 18%, transparent); color: var(--color-text-muted); }
+.task-status--pending { background: color-mix(in srgb, var(--color-primary) 18%, transparent); color: var(--color-primary); }
+
+.asset-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+  background: var(--color-surface);
+}
+
+.asset-card__type {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.asset-card__content {
+  margin-top: var(--space-1);
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+}

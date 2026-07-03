@@ -1,0 +1,14 @@
+{
+  "name": "@wcf/infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Infrastructure layer: OmniRoute gateway, Provider Router, Cache, Cost Optimizer, Retry Manager, MCP Manager, Configuration Manager, Security Manager. No Engine or Agent may call an AI provider except through this package.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@wcf/core": "0.1.0"
+  }
+}
