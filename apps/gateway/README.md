@@ -70,6 +70,9 @@ tested without needing `clasp` or a live deployment.
    `PropertiesService.getScriptProperties().setProperties({...})` from the Apps Script editor):
    - `SESSION_SIGNING_SECRET` — random 32+ byte string, used to sign session tokens.
    - `SECRET_ENCRYPTION_PASSPHRASE` — random 32+ byte string, used by `Secrets.gs`.
-   - `OMNIROUTE_ENDPOINT` / `OMNIROUTE_API_KEY` (or individual provider keys, if calling providers
-     directly instead of through a hosted OmniRoute — see `OmniRouteProxy.gs`).
+   - `OMNIROUTE_ENDPOINT` / `OMNIROUTE_API_KEY` — point these at a deployed instance of
+     `apps/omniroute-server` (see that package's README for how to run/deploy it) to get real
+     multi-provider routing, caching, and failover. Omit them to fall back to `callAnthropicDirect_`
+     in `OmniRouteProxy.gs` (a minimal single-provider path, useful before standing up the full
+     gateway).
 5. Point the GitHub Pages frontend (`apps/web/config.js`) at the deployed Web App URL.
