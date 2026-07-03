@@ -1,0 +1,14 @@
+{
+  "name": "@wcf/memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Persistent Memory subsystem — Global/Brand/Project/Campaign/Conversation/Asset/Prompt Library/Template Library/Knowledge Cache. Every storage backend implements the same MemoryProvider interface (see memoryProviderInterface.js) so business logic never depends on a specific datastore.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "devDependencies": {
+    "@wcf/infrastructure": "0.1.0"
+  }
+}

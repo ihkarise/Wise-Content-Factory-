@@ -65,6 +65,8 @@ function makePropertiesService(initial = {}) {
     getProperty: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
     setProperty: (key, value) => { store[key] = value; },
     setProperties: (obj) => Object.assign(store, obj),
+    deleteProperty: (key) => { delete store[key]; },
+    getProperties: () => ({ ...store }),
   };
   return { getScriptProperties: () => api, _store: store };
 }

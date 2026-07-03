@@ -14,7 +14,7 @@ campaign. See [`docs/architecture/PRODUCT.md`](docs/architecture/PRODUCT.md) for
 ```bash
 npm install
 npm run example                    # runs Example 1 from docs/architecture/EXAMPLES.md end to end
-npm test                           # 139 tests across every layer
+npm test                           # 165 tests across every layer
 python3 -m http.server 8080        # from the repo root
 # open http://localhost:8080/apps/web/  — a working conversational UI, $0 cost
 ```
@@ -33,6 +33,9 @@ Infrastructure Layer  -> OmniRoute, Provider Router, Cache, MCP Manager, Securit
 Provider Layer         -> pluggable AI provider adapters (text, image, video, voice — see packages/providers/README.md)
                           + publishing adapters (Instagram, Facebook, YouTube, LinkedIn, X, Threads
                           — see packages/publishing/README.md)
+Memory Layer            -> Global/Brand/Project/Campaign/Conversation/Asset/Prompt/Template/
+                          Knowledge memory across pluggable storage backends (see
+                          packages/memory/README.md)
 Output Layer            -> Content Package (blog posts, captions, video/image/voice, publish receipts)
 ```
 
@@ -50,6 +53,7 @@ packages/providers/        AI provider adapters — text, image (FLUX), video (H
 packages/engines/           Conversation Engine, Intent Engine, Strategy Engine
 packages/agents/             Agent Orchestrator + content Agents (research, script, image, video, voice, seo, qa, publishing, ...)
 packages/publishing/          Social publishing adapters — Instagram, Facebook, YouTube, LinkedIn, X, Threads
+packages/memory/               Persistent Memory — in-memory, local JSON, PropertiesService, Drive, Sheets adapters
 apps/web/                     GitHub Pages frontend — zero build step, ES modules + an import map
 apps/gateway/                  Google Apps Script secure backend gateway
 apps/omniroute-server/          Deployable OmniRoute HTTP gateway (real provider routing/failover)
@@ -81,12 +85,12 @@ providers in `packages/providers` — nothing to configure, nothing that costs m
 npm test
 ```
 
-139 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
-`packages/publishing`, `packages/engines`, `packages/agents`, `apps/gateway` (via a Node `vm`
-harness that loads the *actual* `.gs` files with mocked Google Apps Script globals — see
-[`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)), `apps/omniroute-server`
-(against a real listening `http.Server`), and `examples/` (full pipeline runs of real scenarios
-from `docs/architecture/EXAMPLES.md`).
+165 tests across `packages/core`, `packages/infrastructure`, `packages/providers`,
+`packages/publishing`, `packages/memory`, `packages/engines`, `packages/agents`, `apps/gateway`
+(via a Node `vm` harness that loads the *actual* `.gs` files with mocked Google Apps Script
+globals — see [`apps/gateway/test/gasHarness.mjs`](apps/gateway/test/gasHarness.mjs)),
+`apps/omniroute-server` (against a real listening `http.Server`), and `examples/` (full pipeline
+runs of real scenarios from `docs/architecture/EXAMPLES.md`).
 
 ## Architecture Review & Roadmap
 
@@ -115,23 +119,28 @@ OpenAI-compatible endpoint — GPT, DeepSeek, OpenRouter, local Ollama models) *
 providers (images: FLUX, OpenAI-compatible; video: HyperFrames, Veo; voice: Browser TTS,
 ElevenLabs — see `packages/providers/README.md`), real social publishing adapters for Instagram,
 Facebook, YouTube, LinkedIn, X, and Threads behind one common interface with a registerable
-Publishing Agent (`packages/publishing/README.md`), a deployable OmniRoute gateway server that
-registers real providers from environment variables (`apps/omniroute-server` — see its README), a
-real MCP client layer with a NotebookLM integration (generic stdio + Streamable HTTP JSON-RPC
-transports, tested against real spawned-process and HTTP MCP servers — see
+Publishing Agent (`packages/publishing/README.md`), a Persistent Memory subsystem spanning Global/
+Brand/Project/Campaign/Conversation/Asset/Prompt Library/Template Library/Knowledge Cache with
+in-memory, local-JSON, PropertiesService, Google Drive, and Google Sheets backends behind one
+common interface (`packages/memory/README.md`, `apps/gateway/Memory.gs`), a deployable OmniRoute
+gateway server that registers real providers from environment variables (`apps/omniroute-server` —
+see its README), a real MCP client layer with a NotebookLM integration (generic stdio + Streamable
+HTTP JSON-RPC transports, tested against real spawned-process and HTTP MCP servers — see
 `packages/infrastructure/src/mcp/README.md`), the secure gateway's auth/session/secrets/job-queue
 design, and a working conversational frontend.
 
-**What's still open:** wiring an automatic `'publishing'` task into the Strategy Engine's
-generated plans (today the Publishing Agent exists and works but must be invoked explicitly — see
+**What's still open:** wiring `MemoryManager` into `apps/web` to replace its current static
+in-process `brandMemory`/`projectMemory`/`conversationMemory` objects (needs a server-side
+credential source for Drive/Sheets — see `packages/memory/README.md`'s Future Extension Notes),
+wiring an automatic `'publishing'` task into the Strategy Engine's generated plans (today the
+Publishing Agent exists and works but must be invoked explicitly — see
 `packages/publishing/README.md`'s Architecture section for why that's a deliberate, separate
-decision), a durable datastore for Memory (currently in-process/CacheService-only), bridging the
-`search_knowledge` capability to the MCP Manager inside OmniRoute itself (today Agents call
-`mcpManager` directly instead — see `apps/omniroute-server/README.md`'s Future Extension Notes),
-local image/video/voice models, and MCP integrations beyond NotebookLM (Filesystem, GitHub, Google
-Drive) — all deliberately deferred rather than
-half-implemented, per `CLAUDE.md`'s
-"no placeholder implementations unless explicitly documented as future work."
+decision), bridging the `search_knowledge` capability to the MCP Manager inside OmniRoute itself
+(today Agents call `mcpManager` directly instead — see `apps/omniroute-server/README.md`'s Future
+Extension Notes), semantic/full-text search over Memory, local image/video/voice models, and MCP
+integrations beyond NotebookLM (Filesystem, GitHub, Google Drive) — all deliberately deferred
+rather than half-implemented, per `CLAUDE.md`'s "no placeholder implementations unless explicitly
+documented as future work."
 
 ## License
 

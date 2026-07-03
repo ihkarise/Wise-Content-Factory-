@@ -10,11 +10,13 @@ The rest of this repository (`packages/*`) is plain modern JavaScript using `imp
 Google Apps Script's V8 runtime does **not** support `import`/`export` across `.gs` files — every
 file in an Apps Script project is concatenated into one shared global scope. So this directory
 deliberately does **not** import `packages/*` directly; it re-implements the small amount of logic
-it actually needs (session signing, redaction, rate limiting) in plain global functions. If you
-change the token format in `packages/infrastructure/src/securityManager.js`, update `Auth.gs` to
-match. The two are independent implementations for independent runtimes (Node vs. GAS's
-`Utilities` service) — `test/gateway.test.mjs` exercises `Auth.gs`'s own round-trip, it does not
-cross-verify tokens between the two implementations.
+it actually needs (session signing, redaction, rate limiting, global-config memory) in plain global
+functions. If you change the token format in `packages/infrastructure/src/securityManager.js`,
+update `Auth.gs` to match; if you change the memory record shape in
+`packages/memory/src/memoryRecord.js`, update `Memory.gs` to match. The two are independent
+implementations for independent runtimes (Node vs. GAS's `Utilities`/`PropertiesService`) —
+`test/gateway.test.mjs` exercises each `.gs` file's own round-trip, it does not cross-verify
+against the Node package.
 
 ## Deployment configuration (read this before deploying)
 
@@ -52,6 +54,10 @@ change, not a config tweak, so treat it as a deliberate decision, not a default.
   — acceptable for a single-owner v1 deployment, called out explicitly rather than presented as a
   hardened production rate limiter. Move this to OmniRoute if/when real multi-tenant traffic
   arrives.
+- **`Memory.gs` is global config only.** `PropertiesService` caps out around 9KB/property and
+  500KB total, so it backs only the `global` Memory collection (small config knobs) — Brand/
+  Project/Campaign/Asset records belong in Drive/Sheets via `@wcf/memory`'s adapters instead. See
+  `packages/memory/README.md`.
 
 ## Local development / testing
 
